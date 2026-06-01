@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="문원동버스">
+<title>문원동 마을버스</title>
+<style>
+  :root {
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+    --green: #34c759;
+    --green-bg: #e8f8ed;
+    --green-text: #1a7a34;
+    --amber: #f59e0b;
+    --amber-bg: #fef3c7;
+    --amber-text: #92400e;
+    --blue: #007aff;
+    --blue-bg: #e5f0ff;
+    --blue-text: #003d99;
+    --gray: #8e8e93;
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --text: #1c1c1e;
+    --text2: #6e6e73;
+    --text3: #aeaeb2;
+    --border: rgba(60,60,67,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: calc(20px + var(--safe-bottom));
+  }
+
+  /* Header */
+  .header {
+    background: rgba(242,242,247,0.85);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    padding: calc(14px + var(--safe-top)) 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .header-title { font-size: 17px; font-weight: 600; letter-spacing: -0.4px; }
+  .header-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Content */
+  .content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Route tabs */
+  .route-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rtab {
+    background: var(--card);
+    border: none;
+    border-radius: 16px;
+    padding: 14px 8px 12px;
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.1s;
+  }
+  .rtab:active { transform: scale(0.97); }
+  .rtab.on { background: var(--blue); }
+  .rtab-num { display: block; font-size: 26px; font-weight: 700; color: var(--text2); letter-spacing: -1px; margin-bottom: 2px; }
+  .rtab.on .rtab-num { color: #fff; }
+  .rtab-lbl { font-size: 12px; color: var(--text3); }
+  .rtab.on .rtab-lbl { color: rgba(255,255,255,0.75); }
+
+  /* Next bus card */
+  .next-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .next-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .next-label { font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .now-str { font-size: 12px; color: var(--text3); }
+  .next-main { display: flex; align-items: center; gap: 12px; }
+  .next-time { font-size: 42px; font-weight: 300; letter-spacing: -2px; color: var(--text); }
+  .next-badge {
+    font-size: 14px; font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: var(--green-bg);
+    color: var(--green-text);
+  }
+  .next-badge.soon { background: var(--amber-bg); color: var(--amber-text); }
+  .next-after { font-size: 13px; color: var(--text2); margin-top: 10px; }
+  .ended-msg { font-size: 20px; font-weight: 500; color: var(--text2); }
+
+  /* Day tabs */
+  .day-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .dtab {
+    background: var(--card);
+    border: none;
+    border-radius: 12px;
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text2);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: transform 0.1s;
+  }
+  .dtab:active { transform: scale(0.97); }
+  .dtab.on { background: var(--text); color: #fff; font-weight: 500; }
+
+  /* Timetable */
+  .tt-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .tt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .tt-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .tt-count { font-size: 12px; color: var(--text3); }
+  .tgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .ti {
+    padding: 9px 2px;
+    text-align: center;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+  }
+  .ti.passed { color: var(--text3); background: transparent; }
+  .ti.nxt { background: var(--green); color: #fff; font-weight: 600; }
+  .ti.soon { background: var(--amber-bg); color: var(--amber-text); font-weight: 500; }
+
+  .notice { font-size: 11px; color: var(--text3); text-align: center; padding: 4px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">문원동 마을버스</div>
+  <div class="header-sub" id="header-sub"></div>
+</div>
+
+<div class="content">
+  <div class="route-row">
+    <button class="rtab on" onclick="selR(1)">
+      <span class="rtab-num">1번</span>
+      <span class="rtab-lbl">마을버스</span>
+    </button>
+    <button class="rtab" onclick="selR(2)">
+      <span class="rtab-num">2번</span>
+      <span class="rtab-lbl">마을버스</span>
+    </button>
+  </div>
+
+  <div class="next-card">
+    <div class="next-top">
+      <div class="next-label">다음 버스</div>
+      <div class="now-str" id="now-str"></div>
+    </div>
+    <div id="next-area"></div>
+    <div class="next-after" id="next-after"></div>
+  </div>
+
+  <div class="day-row">
+    <button class="dtab" id="d0" onclick="selD('weekday')">평일</button>
+    <button class="dtab" id="d1" onclick="selD('holiday')">토·공휴일</button>
+    <button class="dtab" id="d2" onclick="selD('sunday')">일요일</button>
+  </div>
+
+  <div class="tt-card">
+    <div class="tt-head">
+      <div class="tt-title">전체 시간표</div>
+      <div class="tt-count" id="tt-count"></div>
+    </div>
+    <div class="tgrid" id="tgrid"></div>
+  </div>
+
+  <div class="notice">※ 교통 사정에 따라 5~10분 유동적일 수 있습니다</div>
+</div>
+
+<script>
+const B1 = {
+  weekday: ["06:00","06:30","07:00","07:20","07:40","08:00","08:20","08:40","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:20","16:40","17:00","17:20","17:40","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"],
+  holiday: ["06:30","07:00","07:30","08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"],
+  sunday:  ["07:00","07:30","08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"]
+};
+const B2 = {
+  weekday: ["06:00","06:30","07:00","07:20","07:40","08:00","08:20","08:40","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:20","16:40","17:00","17:20","17:40","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"],
+  holiday: ["06:30","07:00","07:30","08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"],
+  sunday:  ["07:00","07:30","08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"]
+};
+
+let R = 1, D = 'weekday';
+
+function toM(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function nowM() { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+function nowStr() { const n = new Date(); return n.getHours() + ':' + String(n.getMinutes()).padStart(2, '0'); }
+function autoD() { const d = new Date().getDay(); return d === 0 ? 'sunday' : d === 6 ? 'holiday' : 'weekday'; }
+function dayLabel(d) { return d === 'weekday' ? '평일' : d === 'holiday' ? '토·공휴일' : '일요일'; }
+
+function render() {
+  const bus = R === 1 ? B1 : B2;
+  const times = bus[D];
+  const n = nowM();
+  const ni = times.findIndex(t => toM(t) >= n);
+
+  document.getElementById('now-str').textContent = '현재 ' + nowStr();
+  document.getElementById('header-sub').textContent = R + '번 · ' + dayLabel(D);
+
+  // Day tabs
+  ['weekday','holiday','sunday'].forEach((key, i) => {
+    document.getElementById('d' + i).className = 'dtab' + (D === key ? ' on' : '');
+  });
+  // Route tabs
+  document.querySelectorAll('.rtab').forEach((el, i) => {
+    el.className = 'rtab' + (i + 1 === R ? ' on' : '');
+  });
+
+  const na = document.getElementById('next-area');
+  const naf = document.getElementById('next-after');
+
+  if (ni === -1) {
+    na.innerHTML = '<div class="ended-msg">오늘 운행 종료</div>';
+    naf.textContent = '내일 첫차 ' + times[0];
+  } else {
+    const diff = toM(times[ni]) - n;
+    const label = diff === 0 ? '지금 출발!' : diff + '분 후';
+    const cls = diff <= 5 ? 'next-badge soon' : 'next-badge';
+    na.innerHTML = `<div class="next-main"><div class="next-time">${times[ni]}</div><div class="${cls}">${label}</div></div>`;
+    const nx = [];
+    if (ni + 1 < times.length) nx.push(times[ni + 1]);
+    if (ni + 2 < times.length) nx.push(times[ni + 2]);
+    naf.textContent = nx.length ? '그 다음: ' + nx.join(', ') : '오늘 마지막 버스';
+  }
+
+  const g = document.getElementById('tgrid');
+  g.innerHTML = '';
+  times.forEach((t, i) => {
+    const div = document.createElement('div');
+    const tm = toM(t), diff = tm - n;
+    if (i === ni) div.className = 'ti nxt';
+    else if (diff > 0 && diff <= 15) div.className = 'ti soon';
+    else if (tm < n) div.className = 'ti passed';
+    else div.className = 'ti';
+    div.textContent = t;
+    g.appendChild(div);
+  });
+  document.getElementById('tt-count').textContent = '총 ' + times.length + '회';
+}
+
+function selR(r) { R = r; render(); }
+function selD(d) { D = d; render(); }
+
+D = autoD();
+render();
+setInterval(render, 30000);
+</script>
+</body>
+</html>
