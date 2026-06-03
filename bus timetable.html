@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="문원동 버스">
+<title>문원동 마을버스</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--text2:#6e6e73;--text3:#aeaeb2;--green:#34c759;--green-bg:#e8f8ed;--blue:#007aff;--border:rgba(0,0,0,0.08);--passed:#f2f2f7;--passed-text:#c7c7cc;--safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:calc(16px + var(--safe-bottom))}
+.header{background:var(--card);padding:calc(12px + var(--safe-top)) 20px 16px;border-bottom:.5px solid var(--border);position:sticky;top:0;z-index:10}
+.header-title{font-size:17px;font-weight:600;letter-spacing:-.3px}
+.header-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.content{padding:16px;display:flex;flex-direction:column;gap:12px}
+.route-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.route-tab{padding:12px;border-radius:12px;border:none;font-size:15px;font-weight:500;font-family:inherit;cursor:pointer;background:var(--card);color:var(--text2);text-align:center}
+.route-tab.active{background:var(--blue);color:#fff}
+.route-tab-num{font-size:22px;font-weight:700;display:block;margin-bottom:2px}
+.route-tab-label{font-size:12px;opacity:.8}
+.next-card{background:var(--card);border-radius:16px;padding:20px}
+.next-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.next-label{font-size:13px;color:var(--text2);font-weight:500}
+.now-time{font-size:13px;color:var(--text3)}
+.next-main{display:flex;align-items:baseline;gap:10px}
+.next-time{font-size:42px;font-weight:700;letter-spacing:-1px}
+.next-badge{background:var(--green-bg);color:var(--green);font-size:14px;font-weight:600;padding:4px 10px;border-radius:20px}
+.next-after{margin-top:8px;font-size:13px;color:var(--text2)}
+.ended{font-size:22px;font-weight:600;color:var(--text2)}
+.day-wrap{background:var(--card);border-radius:12px;padding:3px}
+.day-seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px}
+.day-btn{padding:8px 4px;border:none;border-radius:10px;background:transparent;font-size:12px;font-weight:500;font-family:inherit;color:var(--text2);cursor:pointer;text-align:center}
+.day-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.timetable-card{background:var(--card);border-radius:16px;padding:16px}
+.timetable-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.timetable-title{font-size:15px;font-weight:600}
+.timetable-count{font-size:13px;color:var(--text2)}
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.time-item{padding:9px 4px;text-align:center;border-radius:8px;font-size:14px;color:var(--text);background:var(--bg)}
+.time-item.passed{color:var(--passed-text);background:var(--passed)}
+.time-item.next-bus{background:var(--green);color:#fff;font-weight:600}
+.time-item.soon{background:var(--green-bg);color:var(--green);font-weight:500}
+.notice{font-size:12px;color:var(--text3);text-align:center;padding:4px 0 8px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">문원동 마을버스</div>
+  <div class="header-sub" id="header-sub"></div>
+</div>
+<div class="content">
+  <div class="route-tabs">
+    <button class="route-tab active" onclick="selectRoute(1)"><span class="route-tab-num">1번</span><span class="route-tab-label">마을버스</span></button>
+    <button class="route-tab" onclick="selectRoute(2)"><span class="route-tab-num">2번</span><span class="route-tab-label">마을버스</span></button>
+  </div>
+  <div class="next-card">
+    <div class="next-header"><div class="next-label">다음 버스</div><div class="now-time" id="now-time"></div></div>
+    <div id="next-area"></div>
+    <div class="next-after" id="next-after"></div>
+  </div>
+  <div class="day-wrap">
+    <div class="day-seg" id="day-seg">
+      <!-- 버튼은 노선에 따라 JS로 렌더링 -->
+    </div>
+  </div>
+  <div class="timetable-card">
+    <div class="timetable-header"><div class="timetable-title">전체 시간표</div><div class="timetable-count" id="timetable-count"></div></div>
+    <div class="time-grid" id="time-grid"></div>
+  </div>
+  <div class="notice">※ 교통사정에 따라 5~10분 유동적일 수 있습니다</div>
+</div>
+<script>
+// ── 1번 버스 ──
+// 구분: 평일 / 토요일 / 일요일·공휴일
+const BUS1={
+  weekday:["5:20","5:28","5:36","5:44","5:52","6:00","6:08","6:16","6:24","6:32","6:40","6:48","6:56","7:04","7:11","7:19","7:25","7:32","7:38","7:45","7:51","7:58","8:04","8:11","8:17","8:24","8:30","8:37","8:43","8:50","9:05","9:13","9:21","9:29","9:37","9:45","9:53","10:01","10:09","10:17","10:25","10:33","10:41","10:49","10:57","11:05","11:13","11:21","11:29","11:37","11:45","11:53","12:01","12:09","12:17","12:25","12:33","12:41","12:49","12:57","13:05","13:13","13:21","13:29","13:37","13:45","13:55","14:05","14:15","14:25","14:35","14:45","14:55","15:05","15:15","15:25","15:35","15:45","15:52","16:00","16:07","16:15","16:22","16:30","16:37","16:45","16:52","17:00","17:07","17:15","17:22","17:30","17:37","17:45","17:52","18:00","18:07","18:15","18:22","18:30","18:37","18:45","18:52","19:00","19:07","19:15","19:22","19:30","19:37","19:45","19:52","20:00","20:07","20:15","20:23","20:31","20:39","20:47","20:55","21:03","21:11","21:19","21:27","21:35","21:43","21:51","21:59","22:07","22:15","22:23","22:32","22:41","22:50","23:00","23:10","23:20","23:30"],
+  // 토요일 (88회)
+  saturday:["5:20","5:30","5:40","5:50","6:00","6:10","6:20","6:30","6:40","6:50","7:00","7:10","7:20","7:30","7:40","7:50","8:00","8:10","8:20","8:30","8:40","8:50","9:00","9:10","9:20","9:30","9:40","9:50","10:00","10:10","10:20","10:30","10:40","10:50","11:00","11:10","11:20","11:30","11:40","11:50","12:00","12:10","12:20","12:30","12:40","12:50","13:00","13:10","13:25","13:40","13:55","14:10","14:25","14:40","15:05","15:20","15:35","15:50","16:05","16:20","16:35","16:50","17:05","17:20","17:35","17:50","18:05","18:20","18:35","18:50","19:05","19:20","19:35","19:50","20:05","20:20","20:35","20:50","21:05","21:20","21:35","21:50","22:05","22:25","22:40","22:50","23:20","23:30"],
+  // 일요일·공휴일 (70회)
+  holiday:["5:20","5:40","6:00","6:20","6:40","7:00","7:15","7:30","7:45","8:00","8:15","8:30","8:45","9:00","9:15","9:30","9:55","10:10","10:25","10:40","10:55","11:10","11:25","11:40","11:55","12:10","12:25","12:40","12:55","13:10","13:25","13:40","13:55","14:10","14:25","14:40","14:55","15:20","15:35","15:50","16:05","16:20","16:35","16:50","17:05","17:20","17:35","17:50","18:05","18:20","18:35","18:50","19:05","19:20","19:35","19:50","20:05","20:20","20:35","20:50","21:05","21:20","21:35","21:50","22:05","22:20","22:30","22:50","23:10","23:30"]
+};
+
+// ── 2번 버스 ──
+// 구분: 평일 / 토요일·공휴일 / 일요일
+const BUS2={
+  weekday:["5:40","6:00","6:20","6:40","7:00","7:20","7:40","8:00","8:20","8:40","9:00","9:20","9:40","10:00","10:20","10:40","11:00","11:20","11:40","12:00","12:20","12:40","13:00","13:20","13:40","14:00","14:20","14:40","15:20","15:40","16:00","16:20","16:40","17:00","17:20","17:40","18:00","18:20","18:40","19:00","19:20","19:40","20:00","20:20","20:40","21:00","21:20","21:40","22:00","22:20","22:40","23:00"],
+  saturday:["5:40","6:20","7:00","7:40","8:20","9:00","9:40","10:20","11:00","11:40","12:20","13:00","13:40","14:20","15:00","16:20","17:00","17:40","18:20","19:00","19:40","20:20","21:00","21:40","22:20","23:00"],
+  holiday:["5:40","6:20","7:00","7:40","8:20","9:00","9:40","11:00","11:40","12:20","13:00","13:40","14:20","15:00","16:20","17:00","17:40","18:20","19:00","19:40","20:20","21:00","21:40","22:20","23:00"]
+};
+
+// 노선별 요일 구분 설정
+// bus1: 평일 / 토요일 / 일요일·공휴일
+// bus2: 평일 / 토요일·공휴일 / 일요일
+const DAY_CONFIG = {
+  1: [
+    { key: 'weekday',  label: '평일' },
+    { key: 'saturday', label: '토요일' },
+    { key: 'holiday',  label: '일요일·공휴일' }
+  ],
+  2: [
+    { key: 'weekday',  label: '평일' },
+    { key: 'saturday', label: '토요일·공휴일' },
+    { key: 'holiday',  label: '일요일' }
+  ]
+};
+
+const DAY_LABELS_1 = { weekday:'평일', saturday:'토요일', holiday:'일요일·공휴일' };
+const DAY_LABELS_2 = { weekday:'평일', saturday:'토요일·공휴일', holiday:'일요일' };
+
+let currentRoute = 1, currentDay = 'weekday';
+
+function getBus(){ return currentRoute === 1 ? BUS1 : BUS2; }
+
+function getDayLabel(key){
+  return currentRoute === 1 ? DAY_LABELS_1[key] : DAY_LABELS_2[key];
+}
+
+// 오늘 요일 → 적절한 key 반환 (노선별 다름)
+function autoDay(){
+  const d = new Date().getDay();
+  if(currentRoute === 1){
+    // 1번: 토=토요일, 일·공휴일=holiday, 그외=weekday
+    if(d === 6) return 'saturday';
+    if(d === 0) return 'holiday';
+    return 'weekday';
+  } else {
+    // 2번: 토·공휴일=saturday, 일=holiday, 그외=weekday
+    if(d === 6) return 'saturday';
+    if(d === 0) return 'holiday';
+    return 'weekday';
+  }
+}
+
+function toMin(t){ const[h,m]=t.split(':').map(Number); return h*60+m; }
+function getNow(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+function fmtNow(){ const n=new Date(); return`현재 ${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`; }
+
+function renderDayButtons(){
+  const seg = document.getElementById('day-seg');
+  const config = DAY_CONFIG[currentRoute];
+  seg.innerHTML = config.map(({key, label}) =>
+    `<button class="day-btn${key===currentDay?' active':''}" id="btn-${key}" onclick="selectDay('${key}')">${label}</button>`
+  ).join('');
+}
+
+function render(){
+  const times = getBus()[currentDay];
+  const now = getNow();
+
+  document.getElementById('header-sub').textContent =
+    `마을버스 ${currentRoute}번 · ${getDayLabel(currentDay)}`;
+  document.getElementById('now-time').textContent = fmtNow();
+
+  document.querySelectorAll('.route-tab').forEach((el,i) =>
+    el.classList.toggle('active', i+1 === currentRoute));
+
+  renderDayButtons();
+
+  const nextIdx = times.findIndex(t => toMin(t) >= now);
+  const nextArea = document.getElementById('next-area');
+  const afterEl  = document.getElementById('next-after');
+
+  if(nextIdx === -1){
+    nextArea.innerHTML = '<div class="ended">오늘 운행 종료</div>';
+    afterEl.textContent = '내일 첫차: ' + times[0];
+  } else {
+    const diff = toMin(times[nextIdx]) - now;
+    const badge = diff === 0 ? '지금 출발!' : Math.round(diff) + '분 후';
+    nextArea.innerHTML = `<div class="next-main"><div class="next-time">${times[nextIdx]}</div><div class="next-badge">${badge}</div></div>`;
+    const nx = [];
+    if(nextIdx+1 < times.length) nx.push(times[nextIdx+1]);
+    if(nextIdx+2 < times.length) nx.push(times[nextIdx+2]);
+    afterEl.textContent = nx.length ? '그 다음: ' + nx.join(', ') : '오늘 마지막 버스';
+  }
+
+  const grid = document.getElementById('time-grid');
+  grid.innerHTML = '';
+  times.forEach((t,i) => {
+    const div = document.createElement('div');
+    const tMin = toMin(t), diff = tMin - now;
+    if(i === nextIdx)       div.className = 'time-item next-bus';
+    else if(diff>0&&diff<=10) div.className = 'time-item soon';
+    else if(tMin < now)     div.className = 'time-item passed';
+    else                    div.className = 'time-item';
+    div.textContent = t;
+    grid.appendChild(div);
+  });
+
+  document.getElementById('timetable-count').textContent = `총 ${times.length}회`;
+}
+
+function selectRoute(r){
+  currentRoute = r;
+  currentDay = autoDay();
+  render();
+}
+function selectDay(d){ currentDay = d; render(); }
+
+currentDay = autoDay();
+render();
+setInterval(render, 30000);
+</script>
+</body>
+</html>
